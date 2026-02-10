@@ -27,6 +27,13 @@ jobs:
       - run:
           name: Verify config imports
           command: |
+            echo "🔍 Checking git commit..."
+            git log -1 --oneline
+            echo ""
+            echo "🔍 Checking fetch_news.py imports..."
+            head -30 scripts/fetch_news.py | grep -A 8 "from app.config import"
+            echo ""
+            echo "🔍 Testing config imports..."
             python -c "from app.config import FREE_RSS_SOURCES, CLEANUP_DAYS; print(f'✅ Config imports verified: {len(FREE_RSS_SOURCES)} RSS sources, cleanup {CLEANUP_DAYS} days')" || (echo "❌ Config import failed!"; exit 1)
       
       # Restore pip cache
