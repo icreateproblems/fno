@@ -79,6 +79,12 @@ def main():
     supabase = get_supabase_client(SUPABASE_URL, SUPABASE_KEY)  # Use pooled connection
     logger.info("Starting news fetch cycle...")
 
+    # Debug prints for troubleshooting
+    print("DEBUG: FREE_RSS_SOURCES type:", type(FREE_RSS_SOURCES))
+    print("DEBUG: FREE_RSS_SOURCES keys:", list(FREE_RSS_SOURCES.keys()))
+    print("DEBUG: sys.path:", sys.path)
+    print("DEBUG: SUPABASE_URL:", SUPABASE_URL)
+
     new_count = 0
     batch_stories = []  # Collect stories for batch insert
     ai_monitor = AIContentMonitor()
