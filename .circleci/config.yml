@@ -15,6 +15,13 @@ jobs:
     steps:
       - checkout
       
+      # Clear Python cache to prevent stale imports
+      - run:
+          name: Clear Python cache
+          command: |
+            find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
+            find . -type f -name "*.pyc" -delete 2>/dev/null || true
+      
       # Restore pip cache
       - restore_cache:
           keys:
