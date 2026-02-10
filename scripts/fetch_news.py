@@ -11,17 +11,42 @@ from dotenv import load_dotenv
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.config import (
-    FREE_RSS_SOURCES,
-    SUPABASE_URL,
-    SUPABASE_KEY,
-    MIN_HEADLINE_LENGTH,
-    MAX_HEADLINE_LENGTH,
-    MIN_DESCRIPTION_LENGTH,
-    AI_VALIDATE_ON_INGEST,
-    AI_VALIDATE_MIN_SCORE,
-    CLEANUP_DAYS
-)
+# Try to import from config, but define fallback if import fails
+try:
+    from app.config import (
+        FREE_RSS_SOURCES,
+        SUPABASE_URL,
+        SUPABASE_KEY,
+        MIN_HEADLINE_LENGTH,
+        MAX_HEADLINE_LENGTH,
+        MIN_DESCRIPTION_LENGTH,
+        AI_VALIDATE_ON_INGEST,
+        AI_VALIDATE_MIN_SCORE,
+        CLEANUP_DAYS
+    )
+except ImportError as e:
+    print(f"⚠️ Import error: {e}")
+    print("Using fallback RSS sources definition...")
+    FREE_RSS_SOURCES = {
+        "ekantipur": {"url": "https://ekantipur.com/feed", "category": "general", "region": "Nepal", "timeout": 10},
+        "online_khabar": {"url": "https://www.onlinekhabar.com/feed", "category": "general", "region": "Nepal", "timeout": 10},
+        "setopati": {"url": "https://setopati.com/feed", "category": "general", "region": "Nepal", "timeout": 10},
+        "nepali_times": {"url": "https://www.nepalitimes.com/feed", "category": "general", "region": "Nepal", "timeout": 10},
+        "naya_patrika": {"url": "https://nayapatrika.com/feed", "category": "general", "region": "Nepal", "timeout": 10},
+        "ratopati": {"url": "https://ratopati.com/feed", "category": "general", "region": "Nepal", "timeout": 10},
+        "republica": {"url": "https://www.myrepublica.com/feed", "category": "general", "region": "Nepal", "timeout": 10},
+        "bbc_nepali": {"url": "https://bbc.com/nepali/rss.xml", "category": "general", "region": "Nepal", "timeout": 10},
+    }
+    # Import remaining from environment
+    SUPABASE_URL = os.getenv("SUPABASE_URL")
+    SUPABASE_KEY = os.getenv("SUPABASE_KEY")
+    MIN_HEADLINE_LENGTH = 10
+    MAX_HEADLINE_LENGTH = 200
+    MIN_DESCRIPTION_LENGTH = 30
+    AI_VALIDATE_ON_INGEST = os.getenv("AI_VALIDATE_ON_INGEST", "true").lower() == "true"
+    AI_VALIDATE_MIN_SCORE = int(os.getenv("AI_VALIDATE_MIN_SCORE", "50"))
+    CLEANUP_DAYS = 30
+
 from app.logger import get_logger
 from app.utils import retry_with_backoff, validate_story, format_error_message, is_nepali_text
 from app.db import init_database, cleanup_old_stories
