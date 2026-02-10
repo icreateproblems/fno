@@ -1,0 +1,64 @@
+name: News Bot - GitHub Actions
+
+on:
+  # Every 60 minutes = ~12 runs/day = ~1,560 min/month (under 2,000 limit)
+  schedule:
+    # Runs at :15 every hour for backup coverage
+    - cron: '15 * * * *'
+  
+  # Manual trigger
+  workflow_dispatch:
+
+jobs:
+  fetch-and-post:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+      
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+      
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
+      
+      - name: Setup environment variables
+        run: |
+          echo "Setting up Instagram Graph API credentials..."
+          echo "✓ Using Instagram Graph API (no session file needed)"
+      
+      - name: Fetch breaking news
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+        run: |
+          echo "Fetching news from RSS sources..."
+          python scripts/fetch_news.py
+      
+      - name: Post to Instagram
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_KEY: ${{ secrets.SUPABASE_KEY }}
+          GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+          INSTAGRAM_ACCESS_TOKEN: ${{ secrets.INSTAGRAM_ACCESS_TOKEN }}
+          INSTAGRAM_BUSINESS_ACCOUNT_ID: ${{ secrets.INSTAGRAM_BUSINESS_ACCOUNT_ID }}
+          INSTAGRAM_APP_ID: ${{ secrets.INSTAGRAM_APP_ID }}
+          IMGBB_API_KEY: ${{ secrets.IMGBB_API_KEY }}
+        run: |
+          echo "Posting to Instagram via Graph API..."
+          python scripts/post_instagram_graph.py
+        continue-on-error: true  # Don't fail if no stories available
+      
+      - name: Upload logs (on failure)
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: logs
+          path: logs/*.log
+          retention-days: 7

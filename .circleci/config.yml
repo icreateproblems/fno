@@ -1,0 +1,113 @@
+version: 2.1
+
+# Orbs provide reusable packages of configuration
+orbs:
+  python: circleci/python@2.1.1
+
+# Define the jobs
+jobs:
+  fetch-and-post:
+    docker:
+      - image: cimg/python:3.11
+    
+    resource_class: small  # Use smallest to save credits
+    
+    steps:
+      - checkout
+      
+      # Restore pip cache
+      - restore_cache:
+          keys:
+            - pip-cache-v1-{{ checksum "requirements.txt" }}
+            - pip-cache-v1-
+      
+      # Install dependencies
+      - run:
+          name: Install dependencies
+          command: |
+            python -m pip install --upgrade pip
+            pip install -r requirements.txt
+      
+      # Save pip cache
+      - save_cache:
+          key: pip-cache-v1-{{ checksum "requirements.txt" }}
+          paths:
+            - ~/.cache/pip
+      
+      # Setup Environment (Instagram Graph API)
+      - run:
+          name: Verify environment variables
+          command: |
+            echo "🔧 Verifying Instagram Graph API credentials..."
+            
+            # Check required variables
+            if [ -z "$INSTAGRAM_ACCESS_TOKEN" ]; then
+              echo "❌ ERROR: INSTAGRAM_ACCESS_TOKEN not set!"
+              exit 1
+            fi
+            
+            if [ -z "$INSTAGRAM_BUSINESS_ACCOUNT_ID" ]; then
+              echo "❌ ERROR: INSTAGRAM_BUSINESS_ACCOUNT_ID not set!"
+              exit 1
+            fi
+            
+            if [ -z "$IMGBB_API_KEY" ]; then
+              echo "❌ ERROR: IMGBB_API_KEY not set!"
+              exit 1
+            fi
+            
+            echo "✅ Instagram Graph API credentials configured"
+            echo "✅ Using Instagram Business Account ID: ${INSTAGRAM_BUSINESS_ACCOUNT_ID}"
+      
+      # Fetch breaking news
+      - run:
+          name: Fetch breaking news
+          command: |
+            export SUPABASE_URL="${SUPABASE_URL}"
+            export SUPABASE_KEY="${SUPABASE_KEY}"
+            python scripts/fetch_news.py
+      
+      # Post to Instagram via Graph API
+      - run:
+          name: Post to Instagram
+          command: |
+            export SUPABASE_URL="${SUPABASE_URL}"
+            export SUPABASE_KEY="${SUPABASE_KEY}"
+            export GROQ_API_KEY="${GROQ_API_KEY}"
+            export INSTAGRAM_ACCESS_TOKEN="${INSTAGRAM_ACCESS_TOKEN}"
+            export INSTAGRAM_BUSINESS_ACCOUNT_ID="${INSTAGRAM_BUSINESS_ACCOUNT_ID}"
+            export INSTAGRAM_APP_ID="${INSTAGRAM_APP_ID}"
+            export IMGBB_API_KEY="${IMGBB_API_KEY}"
+            python scripts/post_instagram_graph.py
+          # Don't fail workflow if no stories to post
+          when: always
+
+# Workflows orchestrate jobs
+workflows:
+  version: 2
+  
+  # Anti-Detection Schedule:
+  # - Every 30 minutes (balanced frequency)
+  # - 2 posts per hour = 16-20 posts/day
+  # - Still looks human, not robotic
+  scheduled-fetch:
+    triggers:
+      - schedule:
+          # Runs at :00 and :30 of every hour (48 runs/day)
+          # With 2 posts/hour rate = up to 48 posts/day (limited by MAX_POSTS_PER_DAY)
+          cron: "0,30 * * * *"
+          filters:
+            branches:
+              only:
+                - main
+    jobs:
+      - fetch-and-post
+
+  # Manual trigger workflow (runs on git push to main)
+  manual-run:
+    jobs:
+      - fetch-and-post:
+          filters:
+            branches:
+              only:
+                - main

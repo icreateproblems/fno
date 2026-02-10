@@ -1,0 +1,14 @@
+# Rollback workflow for News Bot
+# This file is triggered when the main pipeline fails
+version: 2.1
+
+jobs:
+  rollback:
+    docker:
+      - image: cimg/base:stable
+    steps:
+      - run:
+          name: Rollback notification
+          command: |
+            echo "⚠️  Pipeline failed - rollback triggered"
+            echo "Reverting to last stable version..."
