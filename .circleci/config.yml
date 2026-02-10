@@ -15,6 +15,15 @@ jobs:
     steps:
       - checkout
       
+      # Ensure we're on the latest main branch (fix for stale checkout)
+      - run:
+          name: Reset to latest main
+          command: |
+            git fetch origin main
+            git reset --hard origin/main
+            echo "✅ Reset to latest main branch"
+            git log -1 --oneline
+      
       # Clear Python cache to prevent stale imports
       - run:
           name: Clear Python cache
