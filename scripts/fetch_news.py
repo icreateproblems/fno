@@ -24,9 +24,10 @@ try:
         AI_VALIDATE_MIN_SCORE,
         CLEANUP_DAYS
     )
-except ImportError as e:
-    print(f"⚠️ Import error: {e}")
-    print("Using fallback RSS sources definition...")
+    print("[OK] Successfully imported from app.config")
+except Exception as e:
+    print(f"[WARNING] Config import failed: {type(e).__name__}: {e}")
+    print("[INFO] Using fallback configuration...")
     FREE_RSS_SOURCES = {
         "ekantipur": {"url": "https://ekantipur.com/feed", "category": "general", "region": "Nepal", "timeout": 10},
         "online_khabar": {"url": "https://www.onlinekhabar.com/feed", "category": "general", "region": "Nepal", "timeout": 10},
@@ -68,6 +69,16 @@ def content_hash(headline: str, url: str = "") -> str:
     return hashlib.sha256(key.encode("utf-8")).hexdigest()
 
 def main():
+    # Safety check: Ensure FREE_RSS_SOURCES is defined
+    global FREE_RSS_SOURCES
+    if 'FREE_RSS_SOURCES' not in globals():
+        print("[CRITICAL] FREE_RSS_SOURCES not defined, using emergency fallback")
+        FREE_RSS_SOURCES = {
+            "ekantipur": {"url": "https://ekantipur.com/feed", "category": "general", "region": "Nepal", "timeout": 10},
+            "online_khabar": {"url": "https://www.onlinekhabar.com/feed", "category": "general", "region": "Nepal", "timeout": 10},
+            "setopati": {"url": "https://setopati.com/feed", "category": "general", "region": "Nepal", "timeout": 10},
+        }
+    
     if not SUPABASE_URL or not SUPABASE_KEY:
         logger.error(format_error_message("missing_env", "SUPABASE_URL / SUPABASE_KEY"))
         return
