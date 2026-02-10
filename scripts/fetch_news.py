@@ -11,7 +11,17 @@ from dotenv import load_dotenv
 import sys
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from app.config import *
+from app.config import (
+    FREE_RSS_SOURCES,
+    SUPABASE_URL,
+    SUPABASE_KEY,
+    MIN_HEADLINE_LENGTH,
+    MAX_HEADLINE_LENGTH,
+    MIN_DESCRIPTION_LENGTH,
+    AI_VALIDATE_ON_INGEST,
+    AI_VALIDATE_MIN_SCORE,
+    CLEANUP_DAYS
+)
 from app.logger import get_logger
 from app.utils import retry_with_backoff, validate_story, format_error_message, is_nepali_text
 from app.db import init_database, cleanup_old_stories
