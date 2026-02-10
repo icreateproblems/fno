@@ -32,7 +32,20 @@ jobs:
             find . -type f -name "*.pyc" -delete 2>/dev/null || true
             echo "✅ Python cache cleared"
       
-      # Verify imports before running
+      # Restore pip cache
+      - restore_cache:
+          keys:
+            - pip-cache-v1-{{ checksum "requirements.txt" }}
+            - pip-cache-v1-
+      
+      # Install dependencies BEFORE verifying imports
+      - run:
+          name: Install dependencies
+          command: |
+            python -m pip install --upgrade pip
+            pip install -r requirements.txt
+      
+      # NOW verify imports (after dependencies are installed)
       - run:
           name: Verify config imports
           command: |
@@ -44,19 +57,6 @@ jobs:
             echo ""
             echo "🔍 Testing config imports..."
             python -c "from app.config import FREE_RSS_SOURCES, CLEANUP_DAYS; print(f'✅ Config imports verified: {len(FREE_RSS_SOURCES)} RSS sources, cleanup {CLEANUP_DAYS} days')" || (echo "❌ Config import failed!"; exit 1)
-      
-      # Restore pip cache
-      - restore_cache:
-          keys:
-            - pip-cache-v1-{{ checksum "requirements.txt" }}
-            - pip-cache-v1-
-      
-      # Install dependencies
-      - run:
-          name: Install dependencies
-          command: |
-            python -m pip install --upgrade pip
-            pip install -r requirements.txt
       
       # Save pip cache
       - save_cache:
