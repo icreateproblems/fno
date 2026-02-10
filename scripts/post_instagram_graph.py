@@ -36,11 +36,11 @@ from app.alerts import alert_manager
 from app.env_validator import validate_and_exit_if_invalid
 from app.random_scheduler import should_attempt_post, mark_successful_post
 
-from groq_caption import generate_caption, rephrase_description_with_groq
-from template_render import render_news_on_template
-from content_filter import should_publish
-from ai_content_monitor import AIContentMonitor
-from utilities.upload_to_imgbb import upload_image_to_imgbb
+from scripts.groq_caption import generate_caption, rephrase_description_with_groq
+from scripts.template_render import render_news_on_template
+from scripts.content_filter import should_publish
+from scripts.ai_content_monitor import AIContentMonitor
+from scripts.utilities.upload_to_imgbb import upload_image_to_imgbb
 
 load_dotenv()
 

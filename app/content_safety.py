@@ -139,7 +139,7 @@ class ContentSafety:
         
         # Primary: AI-based semantic evaluation (preferred method)
         if use_ai:
-            ai_intensity = self._ai_evaluate_grade(text)
+            ai_intensity = self._ai_check_sensitivity(text)
             if ai_intensity > 0.7:  # High intensity threshold for filtering
                 reasons.append(f"AI flagged high-grade content (intensity: {ai_intensity:.2f})")
                 intensity = max(intensity, ai_intensity)
@@ -226,6 +226,27 @@ Respond with ONLY a number 0-100."""
         for pattern in self.compiled_explicit:
             if pattern.search(text):
                 violations.append(f"Explicit content: {pattern.pattern}")
+        
+        return len(violations) > 0, violations
+    
+    def check_misinformation(self, text: str) -> Tuple[bool, List[str]]:
+        """Check for common misinformation patterns and claims."""
+        violations = []
+        
+        # Common misinformation indicators
+        misinformation_patterns = [
+            r'(?:claim|report|rumor|spreading|alleged).*(?:not verified|unconfirmed|fake)',
+            r'(?:exposed|revealed).*(?:truth|cover.?up|conspiracy)',
+            r'scientists? (?:warn|confirm|discover).*(?:shocking|alarming|never before)',
+        ]
+        
+        for pattern_str in misinformation_patterns:
+            try:
+                if re.search(pattern_str, text, re.IGNORECASE):
+                    violations.append("Potential misinformation pattern detected")
+                    break
+            except:
+                pass
         
         return len(violations) > 0, violations
     
