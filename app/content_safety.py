@@ -165,14 +165,14 @@ class ContentSafety:
             
             import requests
             
-            prompt = f\"\"\"Rate this news headline for sensitive/violent content on a scale 0-100:
+            prompt = f"""Rate this news headline for sensitive/violent content on a scale 0-100:
 - 0-30: Safe, appropriate for social media
 - 31-60: Somewhat sensitive but acceptable
 - 61-100: Violence, graphic content, deaths - NOT suitable for Instagram
 
 Headline: {text[:200]}
 
-Respond with ONLY a number 0-100.\"\"\"
+Respond with ONLY a number 0-100."""
             
             response = requests.post(
                 "https://api.groq.com/openai/v1/chat/completions",
