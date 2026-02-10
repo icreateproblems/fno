@@ -9,6 +9,61 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+# ============================================================================
+# RSS SOURCES - Defined at module level for direct import
+# ============================================================================
+FREE_RSS_SOURCES = {
+    # ============= NEPALI GENERAL NEWS =============
+    "ekantipur": {
+        "url": "https://ekantipur.com/feed",
+        "category": "general",
+        "region": "Nepal",
+        "timeout": 10,
+    },
+    "online_khabar": {
+        "url": "https://www.onlinekhabar.com/feed",
+        "category": "general",
+        "region": "Nepal",
+        "timeout": 10,
+    },
+    "setopati": {
+        "url": "https://setopati.com/feed",
+        "category": "general",
+        "region": "Nepal",
+        "timeout": 10,
+    },
+    "nepali_times": {
+        "url": "https://www.nepalitimes.com/feed",
+        "category": "general",
+        "region": "Nepal",
+        "timeout": 10,
+    },
+    "naya_patrika": {
+        "url": "https://nayapatrika.com/feed",
+        "category": "general",
+        "region": "Nepal",
+        "timeout": 10,
+    },
+    "ratopati": {
+        "url": "https://ratopati.com/feed",
+        "category": "general",
+        "region": "Nepal",
+        "timeout": 10,
+    },
+    "republica": {
+        "url": "https://www.myrepublica.com/feed",
+        "category": "general",
+        "region": "Nepal",
+        "timeout": 10,
+    },
+    "bbc_nepali": {
+        "url": "https://bbc.com/nepali/rss.xml",
+        "category": "general",
+        "region": "Nepal",
+        "timeout": 10,
+    },
+}
+
 class Config:
     # ============================================================================
     # TARGET: 30-40 POSTS PER DAY (2-3 posts/hour)
@@ -102,59 +157,6 @@ class Config:
         'https://feeds.bbci.co.uk/news/rss.xml',
         'https://rss.cnn.com/rss/edition.rss'
     ]
-    
-    # Legacy FREE_RSS_SOURCES for backward compatibility
-    FREE_RSS_SOURCES = {
-        # ============= NEPALI GENERAL NEWS =============
-        "ekantipur": {
-            "url": "https://ekantipur.com/feed",
-            "category": "general",
-            "region": "Nepal",
-            "timeout": 10,
-        },
-        "online_khabar": {
-            "url": "https://www.onlinekhabar.com/feed",
-            "category": "general",
-            "region": "Nepal",
-            "timeout": 10,
-        },
-        "setopati": {
-            "url": "https://setopati.com/feed",
-            "category": "general",
-            "region": "Nepal",
-            "timeout": 10,
-        },
-        "nepali_times": {
-            "url": "https://www.nepalitimes.com/feed",
-            "category": "general",
-            "region": "Nepal",
-            "timeout": 10,
-        },
-        "naya_patrika": {
-            "url": "https://nayapatrika.com/feed",
-            "category": "general",
-            "region": "Nepal",
-            "timeout": 10,
-        },
-        "ratopati": {
-            "url": "https://ratopati.com/feed",
-            "category": "general",
-            "region": "Nepal",
-            "timeout": 10,
-        },
-        "republica": {
-            "url": "https://www.myrepublica.com/feed",
-            "category": "general",
-            "region": "Nepal",
-            "timeout": 10,
-        },
-        "bbc_nepali": {
-            "url": "https://bbc.com/nepali/rss.xml",
-            "category": "general",
-            "region": "Nepal",
-            "timeout": 10,
-        },
-    }
     
     # ============================================================================
     # RATE LIMITING (Legacy - kept for backward compatibility)
@@ -261,9 +263,6 @@ MAX_POSTS_PER_HOUR_NORMAL = Config.MAX_POSTS_PER_HOUR_NORMAL
 MAX_POSTS_PER_HOUR_BREAKING = Config.MAX_POSTS_PER_HOUR_BREAKING
 MAX_POSTS_PER_DAY = Config.MAX_POSTS_PER_DAY
 BREAKING_NEWS_KEYWORDS = Config.BREAKING_NEWS_KEYWORDS
-
-# RSS Sources
-FREE_RSS_SOURCES = Config.FREE_RSS_SOURCES
 
 # Database Cleanup
 CLEANUP_DAYS = Config.CLEANUP_DAYS
