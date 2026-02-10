@@ -31,6 +31,8 @@ fetch-post-job:
     - find . -type f -name "*.pyc" -delete 2>/dev/null || true
     - python -m pip install --upgrade pip
     - pip install -r requirements.txt --cache-dir .cache/pip
+    - echo "🔍 Verifying config imports..."
+    - python -c "from app.config import FREE_RSS_SOURCES, CLEANUP_DAYS; print(f'✅ Config verified - {len(FREE_RSS_SOURCES)} RSS sources, cleanup {CLEANUP_DAYS} days')"
   
   script:
     - echo "📡 Fetching news from RSS sources..."

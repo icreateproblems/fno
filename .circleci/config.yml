@@ -21,6 +21,13 @@ jobs:
           command: |
             find . -type d -name "__pycache__" -exec rm -rf {} + 2>/dev/null || true
             find . -type f -name "*.pyc" -delete 2>/dev/null || true
+            echo "✅ Python cache cleared"
+      
+      # Verify imports before running
+      - run:
+          name: Verify config imports
+          command: |
+            python -c "from app.config import FREE_RSS_SOURCES, CLEANUP_DAYS; print(f'✅ Config imports verified: {len(FREE_RSS_SOURCES)} RSS sources, cleanup {CLEANUP_DAYS} days')" || (echo "❌ Config import failed!"; exit 1)
       
       # Restore pip cache
       - restore_cache:
