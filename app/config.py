@@ -64,6 +64,34 @@ FREE_RSS_SOURCES = {
     },
 }
 
+# Explicit exports for wildcard imports
+__all__ = [
+    'FREE_RSS_SOURCES',
+    'Config',
+    'SUPABASE_URL',
+    'SUPABASE_KEY',
+    'GROQ_API_KEY',
+    'GROQ_EDITOR_API_KEY',
+    'IMGBB_API_KEY',
+    'INSTAGRAM_ACCESS_TOKEN',
+    'INSTAGRAM_BUSINESS_ACCOUNT_ID',
+    'INSTAGRAM_APP_ID',
+    'INSTAGRAM_API_VERSION',
+    'INSTAGRAM_SESSION_FILE',
+    'TEMPLATE_PATH',
+    'OUTPUT_IMAGE_PATH',
+    'OUTPUT_IMAGE_SIZE',
+    'TITLE_FONT_PATH',
+    'BODY_FONT_PATH',
+    'NEPALI_TITLE_FONT_PATH',
+    'NEPALI_BODY_FONT_PATH',
+    'MAX_POSTS_PER_HOUR_NORMAL',
+    'MAX_POSTS_PER_HOUR_BREAKING',
+    'MAX_POSTS_PER_DAY',
+    'BREAKING_NEWS_KEYWORDS',
+    'CLEANUP_DAYS',
+]
+
 class Config:
     # ============================================================================
     # TARGET: 30-40 POSTS PER DAY (2-3 posts/hour)
