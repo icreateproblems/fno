@@ -34,6 +34,7 @@ from app.db_pool import get_supabase_client
 from app.content_safety import is_safe_to_post
 from app.alerts import alert_manager
 from app.env_validator import validate_and_exit_if_invalid
+from app.random_scheduler import should_attempt_post, mark_successful_post
 
 from groq_caption import generate_caption, rephrase_description_with_groq
 from template_render import render_news_on_template
@@ -243,7 +244,12 @@ def main():
     logger.info("Starting Instagram posting cycle (Graph API)...")
     supabase = get_supabase_client(SUPABASE_URL, SUPABASE_KEY)
 
-    # Check if should post now
+    # Check random scheduler first (human-like posting intervals)
+    if not should_attempt_post():
+        logger.info("⏳ Random scheduler: Not time to post yet")
+        return
+
+    # Check if should post now (time-based)
     if not should_post_now():
         logger.info("Skipped this cycle (time-based check)")
         return
@@ -449,6 +455,9 @@ def main():
             "posted_at": datetime.now().isoformat()
         }).execute()
 
+        # Update random scheduler
+        mark_successful_post()
+        
         logger.info("✓ Post cycle complete")
     else:
         logger.error(f"❌ Instagram post failed: {error}")

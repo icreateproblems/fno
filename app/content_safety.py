@@ -3,6 +3,7 @@ Content safety and moderation checks.
 Prevents posting of harmful, hateful, or misleading content.
 """
 
+import os
 import re
 from typing import Dict, List, Tuple
 from app.logger import get_logger
@@ -25,6 +26,18 @@ class ContentSafety:
         r'\bf[a4]gg[o0]t\b', r'\btr[a4]nn[y1]\b', r'\bd[y1]ke\b',
         # Violence promotion
         r'\bk[i1]ll all\b', r'\bexterminate\b', r'\bgenocide\b', r'\bmass murder\b',
+    ]
+    
+    # High-grade content patterns (AI-based detection preferred)
+    # Using linguistic patterns for quality control
+    HIGH_GRADE_PATTERNS = [
+        # Pattern: numerical impact statements
+        r'\b\d+\s+(people|persons?)\s+\w+ed\b',
+        r'\b(impact|incident)\s+(count|statistics?)\b',
+        # Pattern: strong action verbs with outcomes
+        r'\b\w+ed\s+(in incident|fatally)\b',
+        # Pattern: graphic descriptors
+        r'\b(graphic|disturbing)\s+(content|media|footage)\b',
     ]
     
     # Misinformation indicators
@@ -81,10 +94,29 @@ class ContentSafety:
     
     def __init__(self):
         self.compiled_hate = [re.compile(pattern, re.IGNORECASE) for pattern in self.HATE_KEYWORDS]
+        self.compiled_high_grade = [re.compile(pattern, re.IGNORECASE) for pattern in self.HIGH_GRADE_PATTERNS]
         self.compiled_misinfo = [re.compile(pattern, re.IGNORECASE) for pattern in self.MISINFO_PATTERNS]
         self.compiled_clickbait = [re.compile(pattern, re.IGNORECASE) for pattern in self.CLICKBAIT_PATTERNS]
         self.compiled_spam = [re.compile(pattern, re.IGNORECASE) for pattern in self.SPAM_PATTERNS]
         self.compiled_explicit = [re.compile(pattern, re.IGNORECASE) for pattern in self.EXPLICIT_KEYWORDS]
+        
+        # Load additional patterns from environment if available (base64 encoded)
+        self._load_custom_patterns()
+        
+        # Load additional patterns from environment if available (base64 encoded)
+        self._load_custom_patterns()
+    
+    def _load_custom_patterns(self):
+        """Load additional quality control patterns from environment (base64 encoded)."""
+        import base64
+        encoded_patterns = os.getenv('CONTENT_GRADE_PATTERNS', '')
+        if encoded_patterns:
+            try:
+                decoded = base64.b64decode(encoded_patterns).decode('utf-8')
+                patterns = decoded.split('|')
+                self.compiled_high_grade.extend([re.compile(p, re.IGNORECASE) for p in patterns if p])
+            except Exception as e:
+                logger.warning(f"Could not load custom patterns: {e}")
     
     def check_hate_speech(self, text: str) -> Tuple[bool, List[str]]:
         """Check for hate speech indicators."""
@@ -96,15 +128,75 @@ class ContentSafety:
         
         return len(violations) > 0, violations
     
-    def check_misinformation(self, text: str) -> Tuple[bool, List[str]]:
-        """Check for known misinformation patterns."""
-        violations = []
+    def check_content_grade(self, text: str, use_ai: bool = True) -> Tuple[bool, List[str], float]:
+        """Check content grade level using AI + pattern matching for platform compliance.
         
-        for pattern in self.compiled_misinfo:
+        Returns:
+            (needs_filtering, reasons_list, intensity_score)
+        """
+        reasons = []
+        intensity = 0.0
+        
+        # Primary: AI-based semantic evaluation (preferred method)
+        if use_ai:
+            ai_intensity = self._ai_evaluate_grade(text)
+            if ai_intensity > 0.7:  # High intensity threshold for filtering
+                reasons.append(f"AI flagged high-grade content (intensity: {ai_intensity:.2f})")
+                intensity = max(intensity, ai_intensity)
+        
+        # Fallback: Pattern matching for quality control
+        for pattern in self.compiled_high_grade:
             if pattern.search(text):
-                violations.append(f"Misinformation pattern: {pattern.pattern}")
+                reasons.append(f"High-grade pattern detected")
+                intensity = max(intensity, 0.8)
         
-        return len(violations) > 0, violations
+        return len(reasons) > 0, reasons, intensity
+    
+    def _ai_check_sensitivity(self, text: str) -> float:
+        """Use AI to detect sensitive content semantically (no keyword hardcoding).
+        
+        Returns:
+            Sensitivity score 0.0-1.0 (0=safe, 1=highly sensitive)
+        """
+        try:
+            from app.config import GROQ_API_KEY
+            if not GROQ_API_KEY:
+                return 0.0
+            
+            import requests
+            
+            prompt = f\"\"\"Rate this news headline for sensitive/violent content on a scale 0-100:
+- 0-30: Safe, appropriate for social media
+- 31-60: Somewhat sensitive but acceptable
+- 61-100: Violence, graphic content, deaths - NOT suitable for Instagram
+
+Headline: {text[:200]}
+
+Respond with ONLY a number 0-100.\"\"\"
+            
+            response = requests.post(
+                "https://api.groq.com/openai/v1/chat/completions",
+                headers={
+                    "Authorization": f"Bearer {GROQ_API_KEY}",
+                    "Content-Type": "application/json",
+                },
+                json={
+                    "model": "llama-3.3-70b-versatile",
+                    "messages": [{"role": "user", "content": prompt}],
+                    "temperature": 0.2,
+                    "max_tokens": 10,
+                },
+                timeout=5,
+            )
+            response.raise_for_status()
+            
+            score_text = response.json()["choices"][0]["message"]["content"].strip()
+            score = int(''.join(filter(str.isdigit, score_text)) or 0)
+            return min(score / 100.0, 1.0)
+            
+        except Exception as e:
+            logger.debug(f"AI sensitivity check failed: {e}")
+            return 0.0  # Fail open (don't block on API errors)
     
     def check_clickbait(self, text: str) -> Tuple[bool, float]:
         """Check for clickbait indicators. Returns (is_clickbait, severity 0-1)."""
@@ -188,6 +280,12 @@ class ContentSafety:
         if has_hate:
             violations.extend(hate_violations)
             severity_scores.append(1.0)
+        
+        # Check content grade using AI for platform compliance
+        needs_filter, filter_reasons, content_intensity = self.check_content_grade(text, use_ai=True)
+        if needs_filter:
+            violations.extend(filter_reasons)
+            severity_scores.append(content_intensity)  # Dynamic intensity from AI
         
         has_misinfo, misinfo_violations = self.check_misinformation(text)
         if has_misinfo:

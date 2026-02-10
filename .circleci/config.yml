@@ -87,15 +87,17 @@ workflows:
   version: 2
   
   # Anti-Detection Schedule:
-  # - Every 30 minutes (balanced frequency)
-  # - 2 posts per hour = 16-20 posts/day
-  # - Still looks human, not robotic
+  # Runs frequently but posts randomly (avoids bot detection)
+  # - Checks every 10 minutes = 144 runs/day
+  # - Random scheduler decides when to actually post (30-40 posts/day)
+  # - Variable intervals (20-90 min) = appears human-like
+  # - No predictable pattern = avoids Instagram/CircleCI flags
   scheduled-fetch:
     triggers:
       - schedule:
-          # Runs at :00 and :30 of every hour (48 runs/day)
-          # With 2 posts/hour rate = up to 48 posts/day (limited by MAX_POSTS_PER_DAY)
-          cron: "0,30 * * * *"
+          # Check every 10 minutes, but only post when random scheduler allows
+          # This creates unpredictable posting patterns (human-like)
+          cron: "*/10 * * * *"
           filters:
             branches:
               only:

@@ -58,6 +58,9 @@ htmlcov/
 *.sqlite3
 data/
 
+# Scheduler state
+scheduler_state.json
+
 # Logs
 logs/
 *.log

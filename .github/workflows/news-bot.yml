@@ -1,10 +1,12 @@
-name: News Bot - GitHub Actions
+name: News Bot - GitHub Actions (Random Posting)
 
 on:
-  # Every 60 minutes = ~12 runs/day = ~1,560 min/month (under 2,000 limit)
+  # Check every 15 minutes but only post when random scheduler allows
+  # This creates unpredictable, human-like posting patterns
   schedule:
-    # Runs at :15 every hour for backup coverage
-    - cron: '15 * * * *'
+    # Runs every 15 minutes = 96 runs/day
+   # Random scheduler decides actual posting times (coordinated with CircleCI)
+    - cron: '*/15 * * * *'
   
   # Manual trigger
   workflow_dispatch:

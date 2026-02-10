@@ -1,0 +1,90 @@
+stages:
+  - fetch-and-post
+
+# Random Posting System for GitLab CI
+# - Runs every 12 minutes (120 checks/day)
+# - Only posts when random scheduler allows (10-15 posts/day)
+# - Total: ~480 minutes/month (unlimited for public repos)
+
+fetch-post-job:
+  stage: fetch-and-post
+  image: python:3.11-slim
+  
+  # Run every 12 minutes = 120 times/day
+  # Random scheduler decides when to actually post
+  # Creates unpredictable, human-like patterns
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule"'
+    - if: '$CI_PIPELINE_SOURCE == "web"'
+    - if: '$CI_PIPELINE_SOURCE == "push" && $CI_COMMIT_BRANCH == "main"'
+  
+  cache:
+    key: ${CI_COMMIT_REF_SLUG}
+    paths:
+      - .cache/pip
+  
+  before_script:
+    - echo "🔧 Setting up environment..."
+    - apt-get update -qq && apt-get install -y -qq git
+    - python -m pip install --upgrade pip
+    - pip install -r requirements.txt --cache-dir .cache/pip
+  
+  script:
+    - echo "📡 Fetching news from RSS sources..."
+    - python scripts/fetch_news.py || echo "⚠️ Fetch completed with warnings"
+    
+    - echo "🎲 Checking random scheduler..."
+    - |
+      python -c "from app.random_scheduler import should_attempt_post
+      import sys
+      if not should_attempt_post():
+          print('⏳ Not time to post yet - waiting for next random interval')
+          sys.exit(0)
+      print('✅ Random scheduler says: Time to post!')"
+    
+    - echo "📸 Posting to Instagram (if scheduler allowed)..."
+    - python scripts/post_instagram_graph.py || echo "⚠️ Post completed with warnings"
+  
+  environment:
+    name: production
+  
+  # Resource optimization
+  timeout: 10m
+  interruptible: true
+  
+  # Store scheduler state as artifact (for coordination)
+  artifacts:
+    paths:
+      - scheduler_state.json
+    expire_in: 1 day
+    when: always
+
+# Nightly cleanup job
+cleanup-job:
+  stage: fetch-and-post
+  image: python:3.11-slim
+  
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "schedule" && $CLEANUP_JOB == "true"'
+  
+  before_script:
+    - pip install -r requirements.txt --cache-dir .cache/pip
+  
+  script:
+    - echo "🧹 Running daily cleanup..."
+    - python scripts/cleanup_old_stories.py || true
+  
+  timeout: 5m
+
+# Variables (set in GitLab CI/CD Settings → Variables)
+variables:
+  PIP_CACHE_DIR: "$CI_PROJECT_DIR/.cache/pip"
+  PYTHONUNBUFFERED: "1"
+  
+# Required secrets (add in GitLab):
+# - SUPABASE_URL
+# - SUPABASE_KEY
+# - GROQ_API_KEY
+# - INSTAGRAM_ACCESS_TOKEN
+# - INSTAGRAM_BUSINESS_ACCOUNT_ID
+# - IMGBB_API_KEY
