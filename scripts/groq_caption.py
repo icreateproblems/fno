@@ -1,3 +1,5 @@
+from app.logger import get_logger
+logger = get_logger(__name__)
 import os
 import sys
 import json
@@ -17,7 +19,7 @@ except ImportError:
 
 GROK_API_KEY = os.getenv("GROK_API_KEY")  
 
-MODEL = "llama-3.1-8b-instant"  # Changed to stable model that works
+MODEL = "llama-3.3-70b-versatile"  # Upgraded to 70B model for higher quality
 
 # Brand hashtag for reach
 BRAND_HASHTAG = "#fastnewsorg"
@@ -34,45 +36,108 @@ def generate_fallback_caption(headline: str, category: str, language: str = "en"
     return {"caption": base, "hashtags": tags, "success": False}
 
 def generate_with_groq(headline: str, description: str = "", language: str = "en"):
-    """Generate caption using Groq API"""
+    """Generate caption using Groq API with improved prompting"""
     if USE_KEY_ROTATION:
         api_key = get_groq_key()
     else:
         api_key = os.getenv("GROQ_API_KEY")
-    
     if not api_key:
         return None
 
+    MODEL = "llama-3.3-70b-versatile"
+
     if language == "nepali":
-        prompt = (
-            "You're a social media editor at a professional news outlet.\n"
-            "Write an engaging Instagram caption in Nepali with strategic hashtags.\n\n"
-            "Caption: Hook readers immediately, use active voice, be authoritative.\n"
-            "Hashtags: Mix trending + niche tags (5-8 tags: broad reach + targeted audience)\n\n"
-            "Return ONLY valid JSON: {\"caption\": \"...\", \"hashtags\": \"#Tag1 #Tag2\"}\n\n"
-            f"Headline: {headline}\n"
-            f"Description: {description}\n"
-        )
+        prompt = """You are a senior news editor at Kantipur Publications (Nepal's most respected newspaper).
+
+Your task: Create a compelling Instagram post in Nepali that sounds NATURAL and PROFESSIONAL - not AI-generated.
+
+CRITICAL RULES:
+1. Write like a human journalist - conversational yet authoritative
+2. NO clichés like "यो घटना..." or "यस सन्दर्भमा..."
+3. Lead with the MOST compelling fact (who/what/why it matters)
+4. Use active voice and concrete details
+5. Keep it concise but informative (2-4 sentences max)
+6. End with context or significance, NOT with a cliffhanger
+
+VERIFY: Does this sound like something a real journalist would write? If it sounds generic or AI-like, rewrite it.
+
+Headline: {headline}
+Details: {description}
+
+Return ONLY valid JSON:
+{{
+  "caption": "Natural Nepali text that sounds human-written",
+  "hashtags": "#Breaking #News #Nepal [2-3 more relevant tags]"
+}}
+
+Example of GOOD writing:
+"सिंहदरबारमा नयाँ संसद भवनको निर्माण ८८% सम्पन्न भएको छ। तर यो परियोजना कहिले सम्पन्न हुन्छ भन्ने स्पष्ट छैन। सरकारी स्रोतका अनुसार, बजेट अभाव र प्राविधिक समस्याले समयमै पूरा हुने सम्भावना कम छ।"
+
+Example of BAD (AI-like) writing:
+"यो घटनाले राजनीतिक परिदृश्यमा महत्त्वपूर्ण प्रभाव पार्नेछ। यस सन्दर्भमा विशेषज्ञहरूले विभिन्न मत राखेका छन्..."
+"""
     elif language == "nepali_to_english":
-        prompt = (
-            "You're a professional news editor translating for global audience.\n"
-            "Translate Nepali news to English with journalistic impact.\n\n"
-            "Caption: Professional tone, strong hook, clear facts.\n"
-            "Hashtags: Strategic mix - trending + topic-specific (5-8 tags for reach)\n\n"
-            "Return ONLY valid JSON: {\"caption\": \"...\", \"hashtags\": \"#Breaking #News\"}\n\n"
-            f"Headline (Nepali): {headline}\n"
-            f"Description (Nepali): {description}\n"
-        )
+        prompt = """You are a professional news translator and editor for an international audience.
+
+Your task: Translate this Nepali news into COMPELLING English that sounds natural and authoritative.
+
+CRITICAL RULES:
+1. Write like BBC News or Reuters - professional but engaging
+2. Lead with the HOOK - the most newsworthy angle
+3. Include specific facts: WHO did WHAT, WHEN, WHERE, WHY
+4. Explain significance - why should global readers care?
+5. NO generic phrases like "In a recent development" or "According to sources"
+6. Use concrete language: "surged 12%" not "increased significantly"
+
+VERIFY: Does this read like professional international journalism? If it sounds AI-generated, rewrite it.
+
+Headline (Nepali): {headline}
+Details (Nepali): {description}
+
+Return ONLY valid JSON:
+{{
+  "caption": "Sharp, professional English news summary",
+  "hashtags": "#Breaking #Nepal #GlobalNews [2-3 relevant tags]"
+}}
+
+Example of GOOD translation:
+"Nepal's new Parliament building in Singha Durbar has reached 88% completion, but officials cannot confirm a finish date. Budget shortfalls and technical delays now threaten the project timeline, government sources confirm."
+
+Example of BAD (AI-like) translation:
+"In a recent development, the construction of the new parliament building has shown significant progress. This is expected to have implications for the political landscape of the country."
+"""
     else:
-        prompt = (
-            "You're a senior editor at a major news outlet writing for Instagram.\n\n"
-            "Caption: Start with a powerful hook. Use journalistic style - active voice, concrete facts, immediate impact.\n"
-            "Hashtags: Strategic selection - combine trending + niche tags. 5-8 tags: broad reach + targeted.\n\n"
-            "Example: {\"caption\": \"BREAKING: Major development as...\", \"hashtags\": \"#BreakingNews #Politics #Global\"}\n\n"
-            f"Headline: {headline}\n"
-            f"Description: {description}\n\n"
-            "Return ONLY valid JSON."
-        )
+        prompt = """You are a senior editor at The Guardian or BBC News writing for Instagram.
+
+Your task: Create a powerful news post that stops scrolling and commands attention.
+
+CRITICAL RULES:
+1. Hook readers IMMEDIATELY - lead with the drama/significance
+2. Use specific facts and concrete details (numbers, names, impact)
+3. Write with authority but energy - like you're telling a friend important news
+4. NO clichés: "game-changer," "unprecedented," "shocking," etc. unless absolutely true
+5. Show, don't tell - "protests blocked 3 highways" not "large protests occurred"
+6. Include human impact when relevant
+
+VERIFY: Would a professional journalist at NYT or BBC write this? If it sounds generic or clickbait-y, rewrite it.
+
+Headline: {headline}
+Details: {description}
+
+Return ONLY valid JSON:
+{{
+  "caption": "Compelling, journalistic Instagram caption",
+  "hashtags": "#Breaking #News #Politics [2-3 specific tags]"
+}}
+
+Example of GOOD writing:
+"Bitcoin crossed $100,000 for the first time today as institutional investors poured $2.3B into crypto funds this week. The surge comes despite regulatory warnings from the SEC, marking a dramatic shift in Wall Street's crypto stance."
+
+Example of BAD (AI-like) writing:
+"In a groundbreaking development, Bitcoin has achieved unprecedented heights, signaling a potential game-changer for the cryptocurrency market. Experts believe this could reshape the financial landscape."
+"""
+
+    prompt = prompt.format(headline=headline, description=description)
 
     try:
         r = requests.post(
@@ -82,12 +147,12 @@ def generate_with_groq(headline: str, description: str = "", language: str = "en
                 "Content-Type": "application/json",
             },
             json={
-                "model": MODEL,
+                "model": MODEL,  # Now using 70B model
                 "messages": [{"role": "user", "content": prompt}],
-                "temperature": 0.4,
-                "max_tokens": 200,
+                "temperature": 0.5,  # Slightly higher for more natural variation
+                "max_tokens": 300,
             },
-            timeout=15,
+            timeout=30,  # Increased timeout for larger model
         )
         r.raise_for_status()
         text = r.json()["choices"][0]["message"]["content"].strip()
@@ -101,15 +166,12 @@ def generate_with_groq(headline: str, description: str = "", language: str = "en
         # Extract JSON object
         json_start = text.find("{")
         json_end = text.rfind("}") + 1
-        
         if json_start >= 0 and json_end > json_start:
             json_str = text[json_start:json_end]
             data = json.loads(json_str)
-            caption = data.get("caption", "").strip().replace("\"", "")
+            caption = data.get("caption", "").strip().replace('"', "")
             hashtags = data.get("hashtags", "#Breaking #News").strip()
-            
             return {"caption": caption[:300], "hashtags": hashtags}
-        
         return None
     except requests.exceptions.HTTPError as e:
         if e.response.status_code in (429, 401):
@@ -171,98 +233,135 @@ def generate_with_grok(headline: str, description: str = ""):
 
 def rephrase_description_with_groq(headline: str, description: str, language: str = "en", for_image: bool = False):
     """
-    Rephrase the description to add context and avoid copyright issues.
-    Makes the content more informative and readable.
-    for_image: If True, generates a very concise 2-sentence summary for the image
+    Rephrase content with journalistic excellence.
+    for_image: If True, generates concise 2-sentence summary for visual display
     """
     if USE_KEY_ROTATION:
         api_key = get_groq_key()
     else:
         api_key = os.getenv("GROQ_API_KEY")
-    
     if not api_key or not description:
         return description
 
+    MODEL = "llama-3.3-70b-versatile"
+
     if for_image:
-        # For image - professional, attention-grabbing summary
+        # For image - attention-grabbing summary that works visually
         if language == "nepali":
-            prompt = (
-                "You're a professional journalist. Write 1-2 powerful sentences in Nepali that capture the essence of this breaking news.\n"
-                "START with a strong hook - the most compelling fact or angle.\n"
-                "Use journalistic style: active voice, concrete details, immediate relevance.\n"
-                "Each sentence MUST end with proper punctuation.\n\n"
-                f"Headline: {headline}\n"
-                f"Details: {description}\n\n"
-                "Make it compelling and professional. Return ONLY the text."
-            )
+            prompt = """आफूलाई Kantipur का वरिष्ठ सम्पादक मान्नुहोस्। Instagram को लागि छवि पाठ तयार गर्नुहोस्।
+
+आवश्यकताहरू:
+1. केवल 2 वाक्य - छोटो, शक्तिशाली, स्पष्ट
+2. सबैभन्दा महत्त्वपूर्ण तथ्यबाट सुरु गर्नुहोस्
+3. ठोस विवरणहरू प्रयोग गर्नुहोस् (संख्या, नाम, प्रभाव)
+4. सक्रिय स्वरमा लेख्नुहोस्
+5. कुनै सामान्य वाक्यांश प्रयोग नगर्नुहोस्
+
+शीर्षक: {headline}
+विवरण: {description}
+
+उदाहरण (राम्रो):
+"Planning Boys United ले Laliguras FC लाई २-१ ले हराएर Buda Subba Gold Cup को फाइनलमा प्रवेश गरेको छ। यो जितले टिमलाई पहिलो पटक यो प्रतिष्ठित प्रतियोगिताको उपाधि जित्ने अवसर दिएको छ।"
+
+केवल पाठ फर्काउनुहोस् (कुनै JSON होइन)।
+"""
         elif language == "nepali_to_english":
-            prompt = (
-                "You're a professional news editor. Translate this Nepali news to English with impact.\n"
-                "START with the most newsworthy angle - what makes this matter?\n"
-                "Use journalistic writing: who, what, when, where - in 1-2 sharp sentences.\n"
-                "Make readers want to know more.\n\n"
-                f"Headline: {headline}\n"
-                f"Details: {description}\n\n"
-                "Return ONLY the powerful English text."
-            )
+            prompt = """You are translating Nepali news for a global Instagram audience.
+
+Requirements:
+1. Exactly 2 sentences - sharp, clear, impactful
+2. Lead with the most newsworthy fact
+3. Include specifics: numbers, names, outcomes
+4. Use active voice throughout
+5. Professional journalism standards (BBC/Reuters quality)
+
+Headline: {headline}
+Details: {description}
+
+Example (GOOD):
+"Planning Boys United secured their spot in the Buda Subba Gold Cup final after defeating Laliguras FC 2-1 in Dhankuta. This victory marks the team's first-ever chance to claim the prestigious regional tournament title."
+
+Example (BAD - too generic):
+"In a thrilling turn of events, Planning Boys United has advanced to the finals. The match was highly competitive with both teams showing excellent performance."
+
+Return ONLY the text (no JSON).
+"""
         else:
-            prompt = (
-                "You're a senior journalist at a major news outlet. Write 1-2 compelling sentences.\n"
-                "HOOK: Start with the most dramatic or important element - grab attention immediately.\n"
-                "Style: Professional journalism - active voice, specific facts, clear impact.\n"
-                "Think: 'Why should readers care RIGHT NOW?'\n\n"
-                f"Headline: {headline}\n"
-                f"Details: {description}\n\n"
-                "Return ONLY the text - no fluff, pure news value."
-            )
+            prompt = """You are a BBC News editor writing image text for Instagram.
+
+Requirements:
+1. Exactly 2 sentences - powerful, visual, memorable
+2. Open with the HOOK - why does this matter RIGHT NOW?
+3. Use concrete details: "surged 12%" not "increased significantly"
+4. Active voice only
+5. Professional tone but conversational energy
+
+Headline: {headline}
+Details: {description}
+
+Example (GOOD):
+"The new Parliament building in Nepal's Singha Durbar complex has reached 88% completion, but lacks a confirmed finish date. Budget constraints and technical delays now threaten the ambitious reconstruction project."
+
+Example (BAD - too vague):
+"A major facelift is underway at Singha Durbar. The new parliament building is taking shape with significant progress being made."
+
+Return ONLY the text (no JSON).
+"""
     else:
-        # For caption - professional journalism with narrative flow
+        # For caption - fuller journalistic treatment
+        # [Similar upgrade for caption version - see full implementation below]
         if language == "nepali":
-            prompt = (
-                "You're a professional journalist writing for Instagram. Explain this news in Nepali with journalistic excellence.\n\n"
-                "STRUCTURE:\n"
-                "1. HOOK - Start with the most compelling fact or consequence\n"
-                "2. CONTEXT - Explain who, what, when, where with specific details\n"
-                "3. SIGNIFICANCE - Why this matters to readers right now\n"
-                "4. [Optional] IMPACT - What happens next or broader implications\n\n"
-                "Style: Professional but accessible, active voice, concrete facts.\n"
-                "Length: Adapt to story importance (2-4 sentences).\n\n"
-                f"Headline: {headline}\n"
-                f"Details: {description}\n\n"
-                "Write with journalistic authority. Return ONLY the text."
-            )
+            prompt = """तपाईं Kantipur का वरिष्ठ पत्रकार हुनुहुन्छ। Instagram को लागि समाचारको व्याख्या गर्नुहोस्।
+
+आवश्यकताहरू:
+1. सबैभन्दा महत्त्वपूर्ण तथ्यबाट सुरु गर्नुहोस्
+2. 2-4 वाक्य, स्पष्ट र सशक्त
+3. ठोस विवरणहरू, नाम, संख्या, स्थान प्रयोग गर्नुहोस्
+4. निष्कर्षमा सन्दर्भ वा महत्त्व दिनुहोस्
+5. कुनै सामान्य वाक्यांश प्रयोग नगर्नुहोस्
+
+शीर्षक: {headline}
+विवरण: {description}
+
+केवल पाठ फर्काउनुहोस् (कुनै JSON होइन)।
+"""
         elif language == "nepali_to_english":
-            prompt = (
-                "You're a news editor translating Nepali news to English with professional journalism standards.\n\n"
-                "STRUCTURE:\n"
-                "1. Lead with the most newsworthy angle - hook readers immediately\n"
-                "2. Provide key facts: who, what, when, where, why\n"
-                "3. Explain significance and impact\n"
-                "4. Add context or consequences if relevant\n\n"
-                "Style: Sharp, professional journalism. Active voice. Specific details.\n"
-                "Make it authoritative yet engaging.\n\n"
-                f"Headline: {headline}\n"
-                f"Details: {description}\n\n"
-                "Return ONLY the English text."
-            )
+            prompt = """You are a senior news translator. Translate this Nepali news for Instagram with professional journalism standards.
+
+Requirements:
+1. Lead with the most newsworthy angle
+2. 2-4 sentences, sharp and clear
+3. Include key facts: who, what, when, where, why
+4. Explain significance and impact
+5. No generic phrases or AI-like language
+
+Headline: {headline}
+Details: {description}
+
+Return ONLY the English text.
+"""
         else:
-            prompt = (
-                "You're a senior journalist at a prestigious news outlet. Write this story for Instagram with professional excellence.\n\n"
-                "STORYTELLING FORMULA:\n"
-                "1. HOOK - Open with the most dramatic/important element (lead)\n"
-                "2. CORE FACTS - Who, what, when, where with concrete details\n"
-                "3. SO WHAT - Why readers should care, immediate significance\n"
-                "4. IMPACT/CONTEXT - Broader implications or what's next\n\n"
-                "Journalistic principles:\n"
-                "- Active voice, strong verbs\n"
-                "- Specific facts over vague statements\n"
-                "- Show impact on real people/situations\n"
-                "- Professional, authoritative tone\n"
-                "- Proper attribution if needed\n\n"
-                f"Headline: {headline}\n"
-                f"Details: {description}\n\n"
-                "Write with authority and narrative flow. Return ONLY the story text."
-            )
+            prompt = """You are a senior journalist at The Guardian. Write this story for Instagram with professional excellence.
+
+STORYTELLING FORMULA:
+1. HOOK - Open with the most dramatic/important element
+2. CORE FACTS - Who, what, when, where with concrete details
+3. SO WHAT - Why readers should care, immediate significance
+4. IMPACT/CONTEXT - Broader implications or what's next
+
+Journalistic principles:
+- Active voice, strong verbs
+- Specific facts over vague statements
+- Show impact on real people/situations
+- Professional, authoritative tone
+
+Headline: {headline}
+Details: {description}
+
+Return ONLY the story text.
+"""
+
+    prompt = prompt.format(headline=headline, description=description)
 
     try:
         r = requests.post(
@@ -277,19 +376,17 @@ def rephrase_description_with_groq(headline: str, description: str, language: st
                 "temperature": 0.6,
                 "max_tokens": 300,
             },
-            timeout=15,
+            timeout=30,
         )
         r.raise_for_status()
         rephrased = r.json()["choices"][0]["message"]["content"].strip()
+        # Verify quality - if it's too short or generic, use original
+        if len(rephrased) < 50 or "in a recent development" in rephrased.lower():
+            # logger.warning("AI output too generic, using original")
+            return description
         return rephrased
-    except requests.exceptions.HTTPError as e:
-        if e.response.status_code in (429, 401):
-            if USE_KEY_ROTATION:
-                mark_groq_key_failed(api_key)
-        print(f"Rephrase error: {e}")
-        return description
     except Exception as e:
-        print(f"Rephrase error: {e}")
+        # logger.error(f"Rephrase error: {e}")
         return description
 
 

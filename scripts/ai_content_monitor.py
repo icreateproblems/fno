@@ -34,10 +34,10 @@ class AIContentMonitor:
     
     def __init__(self):
         if USE_KEY_ROTATION:
-            self.api_key = None  # Will be fetched per request
+            self.api_key = None
         else:
             self.api_key = GROQ_API_KEY
-        self.model = "llama-3.1-8b-instant"  # Current stable small model
+        self.model = "llama-3.3-70b-versatile"  # Changed from 8b to 70b
         self.api_url = "https://api.groq.com/openai/v1/chat/completions"
     
     def evaluate_content(self, headline: str, description: str, category: str, source: str) -> dict:
@@ -124,128 +124,162 @@ class AIContentMonitor:
                 'trending_score': 0
             }
     
+
     def _build_evaluation_prompt(self, headline: str, description: str, category: str, source: str) -> str:
-        """Build the evaluation prompt for the AI"""
-        
-        return f"""You are an expert content moderator for a news Instagram account (@fastnewsorg). 
-Your job is to decide if this news story should be published.
+        """Build evaluation prompt with strict quality standards"""
+        return f"""You are a senior editorial director at The New York Times evaluating content for Instagram (@fastnewsorg).
+
+Your job: Decide if this news story meets PROFESSIONAL JOURNALISM STANDARDS for publication.
 
 STORY TO EVALUATE:
-- Headline: {headline}
-- Description: {description}
-- Category: {category}
-- Source: {source}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+Headline: {headline}
+Description: {description}
+Category: {category}
+Source: {source}
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
 
-EVALUATE THIS STORY ON:
+EVALUATION CRITERIA (Rate 0-100 for each):
 
-1. **ETHICS** (0-100): Is it appropriate? Any misinformation? Biased reporting? Offensive content?
-   - 90-100: Perfectly balanced, factual, non-offensive
-   - 70-89: Generally good, minor concerns
-   - 50-69: Some concerns but publishable
-   - Below 50: Problematic content
+1. **JOURNALISTIC INTEGRITY** (Weight: 40%)
+    - Is this factual and verifiable? (not speculation, rumors, or unconfirmed reports)
+    - Is the source credible and reputable?
+    - Is reporting balanced (not heavily biased or one-sided)?
+    - Does it avoid misinformation, conspiracy theories, or fake news?
+   
+    SCORING:
+    • 90-100: Verified facts, credible source (Reuters, BBC, AP, major newspapers)
+    • 70-89:  Likely accurate, reputable source, minor uncertainty
+    • 50-69:  Some concerns but publishable (lower-tier sources, slight bias)
+    • Below 50: REJECT (tabloid-quality, unverified, biased, suspicious)
 
-2. **ENGAGEMENT** (0-100): Will Instagram audience find it interesting/shocking/important?
-   - 90-100: Trending, highly engaging, must-see
-   - 70-89: Very engaging, good for engagement
-   - 50-69: Moderately interesting
-   - Below 50: Boring or niche
+2. **NEWS VALUE** (Weight: 30%)
+    - Is this actually newsworthy? (significance, impact, timeliness)
+    - Does it matter to a general audience?
+    - Is this breaking news or old/stale content?
+    - Is this interesting enough for Instagram?
+   
+    SCORING:
+    • 90-100: Major news event, breaking story, high impact
+    • 70-89:  Important news, trending topic, strong interest
+    • 50-69:  Moderate interest, niche appeal
+    • Below 50: REJECT (boring, outdated, nobody cares)
 
-3. **NOVELTY** (0-100): Is this fresh news or old/repetitive?
-   - 90-100: Breaking news, completely fresh
-   - 70-89: Recent and relevant
-   - 50-69: Somewhat recent
-   - Below 50: Old or repetitive
+3. **CONTENT QUALITY** (Weight: 20%)
+    - Is the writing clear and professional?
+    - Does it have enough detail/context?
+    - Is it well-structured and coherent?
+    - Does it avoid clickbait language?
+   
+    SCORING:
+    • 90-100: Excellent journalism, clear writing, good context
+    • 70-89:  Good quality, minor issues
+    • 50-69:  Acceptable but could be better
+    • Below 50: REJECT (poorly written, confusing, clickbait)
 
-4. **TRENDING** (0-100): Is this trending or newsworthy right now?
-   - 90-100: Major trending topic
-   - 70-89: Trending in news cycle
-   - 50-69: Somewhat relevant
-   - Below 50: Not trending
+4. **AUDIENCE FIT** (Weight: 10%)
+    - Will Instagram users engage with this?
+    - Is it visually/contextually appropriate for social media?
+    - Does it fit our brand (professional news, not entertainment gossip)?
+   
+    SCORING:
+    • 90-100: Perfect for Instagram news audience
+    • 70-89:  Good fit, strong engagement potential
+    • 50-69:  Okay fit, moderate engagement
+    • Below 50: REJECT (wrong platform, won't resonate)
 
-RESPOND IN THIS EXACT JSON FORMAT (no other text):
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+
+PUBLISHING THRESHOLDS:
+✅ PUBLISH if:
+    - Overall Score ≥ 70 AND
+    - Journalistic Integrity ≥ 60 AND
+    - News Value ≥ 60
+
+❌ REJECT if:
+    - Overall Score < 70 OR
+    - Journalistic Integrity < 60 OR
+    - News Value < 60
+
+RESPOND IN THIS EXACT JSON FORMAT (no additional text):
 {{
-    "should_publish": true/false,
-    "confidence": 0.0-1.0,
-    "ethics_score": 0-100,
-    "engagement_score": 0-100,
-    "novelty_score": 0-100,
-    "trending_score": 0-100,
-    "overall_score": 0-100,
-    "reasoning": "Brief explanation of why to publish or not"
+     "should_publish": true/false,
+     "confidence": 0.0-1.0,
+     "integrity_score": 0-100,
+     "news_value_score": 0-100,
+     "quality_score": 0-100,
+     "audience_score": 0-100,
+     "overall_score": 0-100,
+     "reasoning": "Explain your decision in 1-2 sentences"
 }}
 
-Remember:
-- We want ENGAGING and ETHICAL content
-- Focus on global news, politics, tech, business, events
-- Minimum acceptable score: 50/100
-- Prefer high engagement (70+) stories
-- Ethics is non-negotiable (must be 50+)
+Be STRICT. When in doubt, REJECT. We only want HIGH-QUALITY journalism.
 """
     
     def _parse_ai_response(self, response_text: str, headline: str) -> dict:
-        """Parse the JSON response from AI"""
-        
+        """Parse AI response with stricter validation"""
         try:
-            # Find JSON in response
             start_idx = response_text.find('{')
             end_idx = response_text.rfind('}') + 1
-            
             if start_idx == -1 or end_idx == 0:
-                logger.warning(f"Could not find JSON in response: {response_text[:200]}")
-                return {
-                    'should_publish': False,
-                    'confidence': 0.2,
-                    'score': 0,
-                    'reasoning': 'Could not parse AI response',
-                    'ethics_score': 0,
-                    'engagement_score': 0,
-                    'novelty_score': 0,
-                    'trending_score': 0
-                }
-            
+                logger.warning(f"Could not parse AI response")
+                return self._rejection_fallback("Parse error")
             json_str = response_text[start_idx:end_idx]
             data = json.loads(json_str)
-            
-            # Validate and construct response
+            integrity = data.get('integrity_score', 0)
+            news_value = data.get('news_value_score', 0)
+            quality = data.get('quality_score', 0)
+            audience = data.get('audience_score', 0)
+            overall_score = int(
+                (integrity * 0.40) +
+                (news_value * 0.30) +
+                (quality * 0.20) +
+                (audience * 0.10)
+            )
+            should_publish = (
+                overall_score >= 70 and
+                integrity >= 60 and
+                news_value >= 60
+            )
             decision = {
-                'should_publish': data.get('should_publish', False),
+                'should_publish': should_publish,
                 'confidence': min(1.0, max(0.0, data.get('confidence', 0.5))),
-                'score': data.get('overall_score', 50),
-                'ethics_score': data.get('ethics_score', 50),
-                'engagement_score': data.get('engagement_score', 50),
-                'novelty_score': data.get('novelty_score', 50),
-                'trending_score': data.get('trending_score', 50),
+                'score': overall_score,
+                'ethics_score': integrity,  # Legacy field name
+                'engagement_score': news_value,  # Legacy field name
+                'novelty_score': quality,  # Legacy field name
+                'trending_score': audience,  # Legacy field name
                 'reasoning': data.get('reasoning', 'No reasoning provided')
             }
-            
-            # Apply publishing rules
-            if decision['ethics_score'] < 40:
+            if integrity < 60:
                 decision['should_publish'] = False
-                decision['reasoning'] = f"Ethics score too low ({decision['ethics_score']}/100)"
-            elif decision['score'] < 45:
+                decision['reasoning'] = f"Failed integrity check ({integrity}/100)"
+            elif news_value < 60:
                 decision['should_publish'] = False
-                decision['reasoning'] = f"Overall score too low ({decision['score']}/100)"
-            
-            logger.info(f"📊 AI Decision:")
-            logger.info(f"   Publish: {decision['should_publish']}")
-            logger.info(f"   Score: {decision['score']}/100 (Ethics: {decision['ethics_score']}, Engagement: {decision['engagement_score']}, Novelty: {decision['novelty_score']}, Trending: {decision['trending_score']})")
+                decision['reasoning'] = f"Insufficient news value ({news_value}/100)"
+            elif overall_score < 70:
+                decision['should_publish'] = False
+                decision['reasoning'] = f"Below quality threshold ({overall_score}/100)"
+            logger.info(f"📊 AI Decision: {'✅ PUBLISH' if decision['should_publish'] else '❌ REJECT'}")
+            logger.info(f"   Overall: {overall_score}/100 | Integrity: {integrity} | News: {news_value} | Quality: {quality}")
             logger.info(f"   Reasoning: {decision['reasoning']}")
-            
             return decision
-            
-        except json.JSONDecodeError as e:
-            logger.error(f"Failed to parse JSON: {e}")
-            logger.debug(f"Response was: {response_text}")
-            return {
-                'should_publish': False,
-                'confidence': 0.1,
-                'score': 0,
-                'reasoning': f'JSON parse error: {str(e)}',
-                'ethics_score': 0,
-                'engagement_score': 0,
-                'novelty_score': 0,
-                'trending_score': 0
-            }
+        except Exception as e:
+            logger.error(f"Failed to parse AI response: {e}")
+            return self._rejection_fallback(str(e))
+
+    def _rejection_fallback(self, reason: str) -> dict:
+        """Return rejection decision when AI fails"""
+        return {
+            'should_publish': False,
+            'confidence': 0.1,
+            'score': 0,
+            'reasoning': f'AI evaluation failed: {reason}',
+            'ethics_score': 0,
+            'engagement_score': 0,
+            'novelty_score': 0,
+            'trending_score': 0
+        }
 
 
 def should_publish_ai(headline: str, description: str, category: str = "general", source: str = "unknown") -> tuple:

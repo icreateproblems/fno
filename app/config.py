@@ -62,6 +62,58 @@ FREE_RSS_SOURCES = {
         "region": "Nepal",
         "timeout": 10,
     },
+
+    # ============= ADDITIONAL NEPALI SOURCES =============
+    "annapurna_post": {
+        "url": "https://annapurnapost.com/rss",
+        "category": "general",
+        "region": "Nepal",
+        "timeout": 10,
+    },
+    "kathmandu_post": {
+        "url": "https://kathmandupost.com/rss",
+        "category": "general",
+        "region": "Nepal",
+        "timeout": 10,
+    },
+    "himalayan_times": {
+        "url": "https://thehimalayantimes.com/rss",
+        "category": "general",
+        "region": "Nepal",
+        "timeout": 10,
+    },
+    "nagariknews": {
+        "url": "https://nagariknews.nagariknetwork.com/rss",
+        "category": "general",
+        "region": "Nepal",
+        "timeout": 10,
+    },
+
+    # ============= INTERNATIONAL SOURCES (ENGLISH) =============
+    "bbc_world": {
+        "url": "https://feeds.bbci.co.uk/news/world/rss.xml",
+        "category": "international",
+        "region": "Global",
+        "timeout": 10,
+    },
+    "reuters": {
+        "url": "https://www.reutersagency.com/feed/",
+        "category": "international",
+        "region": "Global",
+        "timeout": 10,
+    },
+    "ap_news": {
+        "url": "https://apnews.com/apf-topnews",
+        "category": "international",
+        "region": "Global",
+        "timeout": 10,
+    },
+    "aljazeera": {
+        "url": "https://www.aljazeera.com/xml/rss/all.xml",
+        "category": "international",
+        "region": "Global",
+        "timeout": 10,
+    },
 }
 
 # Explicit exports for wildcard imports

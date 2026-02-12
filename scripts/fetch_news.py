@@ -1,3 +1,7 @@
+# Import high-volume config for RSS_ENTRIES_PER_SOURCE
+import sys, os
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+from app.config_high_volume import HighVolumeConfig as Config
 import os
 import re
 import hashlib
@@ -111,7 +115,7 @@ def main():
             logger.error(f"Error fetching {source}: {e}")
             continue
         
-        for e in feed.entries[:25]:
+        for e in feed.entries[:Config.RSS_ENTRIES_PER_SOURCE]:
             headline = e.get("title", "").strip()
             if not headline:
                 continue
